@@ -1,16 +1,25 @@
 import User from "../models/User.js"
+import {  getAuth } from '@clerk/express'
+export const protect = async (req, res, next) => {
+  const { userId } = getAuth(req);
+  
+  console.log(getAuth(req));
 
-export const protect =async(req,res,next)=>{
-      const { userId } = req.auth(); 
-      
-    
-    if(!userId){
-        res.json({success:false, message:"Not authorizes"})
-    }
-    else{
-        const user =await User.findById(userId)
-        req.user =user;
-        next()
+  console.log("USER ID:", userId);
 
-    }
-}
+  if (!userId) {
+    return res.json({ success: false, message: "Not authorized" });
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    return res.json({
+      success: false,
+      message: "User not yet created (webhook delay)",
+    });
+  }
+
+  req.user = user;
+  next();
+};

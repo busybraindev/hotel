@@ -5,7 +5,7 @@ import Room from "../models/room.js"
 export const createRoom=async(req,res)=>{
     try{
         const{roomType,pricePerNight, amenities}=req.body
-        const hotel =await Hotel.findOne({owmer:req.auth.userId})
+        const hotel =await Hotel.findOne({owner:req.user._id})
         if(!hotel){
             return res.json({success:false, message:"No hotel Found"})
         }
@@ -33,7 +33,7 @@ export const getRoom=async(req,res)=>{
     try{
         const rooms= await Room.find({isAvailable:true}).populate({
             path:"hotel",
-            popualte:{
+            popualate:{
                 path:"owner",
                 select:"image"
 
@@ -47,8 +47,10 @@ export const getRoom=async(req,res)=>{
 }
 export const getOwnerRooms=async(req,res)=>{
     try{
-   const hd=await Hotel.find({owner:req.auth.userId})
+   const hd=await Hotel.findOne({owner:req.user._id})
    const rooms=await Room.find({hotel:hd._id.toString()}).populate("hotel")
+   console.log(rooms);
+   
    res.json({success:true, rooms})
     }
      catch(err){
@@ -58,7 +60,7 @@ export const getOwnerRooms=async(req,res)=>{
 export const toogleRoom=async(req,res)=>{
     try{
       const {roomId}=req.body;
-      const {rd}=await Room.findById(roomId)
+      const rd=await Room.findById(roomId)
       rd.isAvailable= !rd.isAvailable;
       await rd.save()
       res.json({success:true, message: "Room Updated"})

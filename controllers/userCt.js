@@ -24,7 +24,7 @@ export const SRs =async(req,res)=>{
          await user.save()
     res.json({success:true,message:"City added"})
     }
-    catch(errr){
+    catch(err){
         res.json({success:false, message:err.message})
     }
    

@@ -1,3 +1,4 @@
+import transporter from "../config/nodemailer.js"
 import Booking from "../models/Book.js"
 import Hotel from "../models/Hotel.js"
 import Room from "../models/room.js"
@@ -12,55 +13,112 @@ const checkAvailability =async({checkInDate, checkOutDate, room})=>{
         const isAvailable = book.length ===0 
         return isAvailable
     }
-    catch(err){
-        console.log(err.message);
-        
-    }
+  catch (err) {
+  throw new Error(err.message);
+}
 }
 export const check =async(req,res)=>{
     try{
     const {room,checkOutDate,checkInDate}=req.body
     const isAvailable= await checkAvailability({checkInDate, checkOutDate,room})
-    res.json({success:true}, isAvailable)
+    res.json({success:true, isAvailable})
     }
     catch(err){
         res.json({success:false, message:err.message})
     }
 }
 
-export const createBook =async(req,res)=>{
-    try{
-        const{room, checkInDate,checkOutDate,guests}=req.body
-        const user=req.user._id
-        const isAvailable =await checkAvailability({checkInDate,checkOutDate,room})
-        if(!isAvailable){
-            return res.json({success:false, message:"Room is not avaialble"})
-        }
-        const roomData =await Room.findById(room).populate('hotel')
-        let totalPrice=roomData.pricePerNight
-        const checkIn =new Date(checkInDate)
-        const checkOut =new Date(checkOutDate)
-        const timeDiff =checkOut.getTime()- checkIn.getTime()
-        const nights =Math.ceil(timeDiff/(1000*3600*24))
-        totalPrice*=nights;
-        const booking =await Booking.create({
-            user,
-            room,
-            hotel: roomData.hotel._id,
-            guests: +guests,
-            checkInDate,
-            checkOutDate,
-            totalPrice
-        })
-        res.json({success:true, message:"Booking created"})
-        }
-        catch(err){
-            console.log(err);
-            
-            res.json({success:false, message:"failed"})
-        }
-}
 
+export const createBook = async (req, res) => {
+  try {
+    const { room, checkInDate, checkOutDate, guests } = req.body;
+    const user = req.user._id;
+
+    const isAvailable = await checkAvailability({
+      checkInDate,
+      checkOutDate,
+      room,
+    });
+
+    if (!isAvailable) {
+      return res.json({
+        success: false,
+        message: "Room is not available",
+      });
+    }
+
+    const roomData = await Room.findById(room).populate("hotel");
+
+    let totalPrice = roomData.pricePerNight;
+
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
+
+    const nights = Math.ceil(
+      (checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24)
+    );
+
+    totalPrice *= nights;
+
+    const booking = await Booking.create({
+      user,
+      room,
+      hotel: roomData.hotel._id,
+      guests: +guests,
+      checkInDate,
+      checkOutDate,
+      totalPrice,
+    });
+
+    // ✅ SEND RESPONSE FIRST
+    res.json({ success: true, message: "Booking created" });
+
+    // ✅ DEBUG USER INFO
+    console.log("USER:", req.user);
+
+    // ⚠️ Ensure email exists
+    if (!req.user.email) {
+      console.log("❌ No email found for user");
+      return;
+    }
+
+    // ✅ SEND EMAIL (non-blocking)
+    try {
+      const mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: req.user.email,
+        subject: "Hotel Booking Details",
+        html: `
+          <h2>Booking Confirmed</h2>
+          <p>Dear ${req.user.username}</p>
+          <p>Thank you for your booking! Here are your details:</p>
+
+          <ul>
+            <li><strong>Booking ID:</strong> ${booking._id}</li>
+            <li><strong>Hotel Name:</strong> ${roomData.hotel.name}</li>
+            <li><strong>Location:</strong> ${roomData.hotel.address}</li>
+            <li><strong>Date:</strong> ${new Date(
+              booking.checkInDate
+            ).toDateString()}</li>
+            <li><strong>Amount:</strong> ${
+              process.env.CURRENCY || "$"
+            }${booking.totalPrice}</li>
+          </ul>
+
+          <p>We look forward to seeing you!</p>
+        `,
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log("✅ Email sent");
+    } catch (err) {
+      console.log("❌ Email failed:", err.message);
+    }
+  } catch (err) {
+    console.log(err);
+    res.json({ success: false, message: "failed" });
+  }
+};
 export const getUserBook =async(req,res)=>{
     try{
         const user= req.user._id;
@@ -73,11 +131,11 @@ export const getUserBook =async(req,res)=>{
 }
 export  const getHotelBook=async(req,res)=>{
    try{
-     const hotel = await Hotel.findOne({owner:req.auth.userId})
+     const hotel = await Hotel.findOne({owner:req.user._id})
     if(!hotel){
         return res.json({success:false, message:"No Hotel found"})
     }
-    const book =await Booking.find({hotel:hotel._id}).populate("room hotel user").toSorted({createdAt:-1})
+    const book =await Booking.find({hotel:hotel._id}).populate("room hotel user").sort({createdAt:-1})
     const tb =book.length;
     const tr=book.reduce((acc,booking)=>acc+ booking.totalPrice,0)
     res.json({success:true, dashboardData:{book,tb,tr}})

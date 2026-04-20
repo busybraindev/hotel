@@ -2,7 +2,7 @@ import express from "express"
 import "dotenv/config"
 import cors from "cors"
 import connectDb from "./config/Db.js"
-import { clerkMiddleware, clerkClient, requireAuth, getAuth } from '@clerk/express'
+import { clerkMiddleware, getAuth } from '@clerk/express'
 import cw from "./controllers/Cwebhook.js"
 import userRouter from "./routes/userRoutes.js"
 import hotelRouter from "./routes/Hotelroutes.js"
@@ -10,12 +10,15 @@ import connectD from "./config/cloud.js"
 import roomRouter from "./routes/roomroute.js"
 import bookingRouter from "./routes/bookRt.js"
 
-
+//  const { userId } = getAuth(req)
 connectDb()
 connectD()
 const app=express()
 
-app.use(cors())
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
 app.use(clerkMiddleware())
 
 app.use('/api/clerk', express.raw({ type: 'application/json' }), cw)
