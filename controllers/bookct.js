@@ -135,10 +135,10 @@ export  const getHotelBook=async(req,res)=>{
     if(!hotel){
         return res.json({success:false, message:"No Hotel found"})
     }
-    const book =await Booking.find({hotel:hotel._id}).populate("room hotel user").sort({createdAt:-1})
-    const tb =book.length;
-    const tr=book.reduce((acc,booking)=>acc+ booking.totalPrice,0)
-    res.json({success:true, dashboardData:{book,tb,tr}})
+    const bookings =await Booking.find({hotel:hotel._id}).populate("room hotel user").sort({createdAt:-1})
+    const totalBookings =bookings.length;
+    const totalRevenue=bookings.reduce((acc,booking)=>acc+ booking.totalPrice,0)
+    res.json({success:true, dashboardData:{bookings,totalBookings,totalRevenue}})
    }
    catch(err){
     res.json({success:false, message:"Failed to fetch"})
