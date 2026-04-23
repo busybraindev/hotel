@@ -12,6 +12,7 @@
   "type": "module",
   "dependencies": {
     "@clerk/express": "^2.1.0",
+    "axios": "^1.15.2",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",

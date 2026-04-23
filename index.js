@@ -17,7 +17,7 @@ const app=express()
 
 app.use(cors({
   origin: "https://hotelfrontend-two.vercel.app",
-  credentials: true
+
 }));
 app.use(clerkMiddleware())
 
