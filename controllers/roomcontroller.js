@@ -33,7 +33,7 @@ export const getRoom=async(req,res)=>{
     try{
         const rooms= await Room.find({isAvailable:true}).populate({
             path:"hotel",
-            popualate:{
+            populate:{
                 path:"owner",
                 select:"image"
 
